@@ -1,13 +1,16 @@
 import JavaScriptCore
 
 /// Library for parsing, formatting, and validating international phone numbers.
+///
 /// It leverages functionality of [Google's JS libphonenumber library](https://github.com/google/libphonenumber/tree/master/javascript).
 /// Standalone JS file was generated with [LibphonenumberStandaloneJS](https://github.com/alex1704/LibphonenumberStandaloneJS).
-/// - Note: Library method returns optional  valuesis because js evaluation returns optional value and it is better to give a chance
+///
+/// Library method returns optional  valuesis because js evaluation returns optional value and it is better to give a chance
 /// call site to interpret event instead of, for example, return false when script evaluation returns nil.
 public struct LibPhoneNumber {
 
     /// Instanciate JS context and loads LibphonenumberStandaloneJS functionality
+    ///
     /// - Parameter jsContent: Content generated with [LibphonenumberStandaloneJS](https://github.com/alex1704/LibphonenumberStandaloneJS).
     /// If it is nil then version shipped with package is used.
     public init?(jsContent: String? = nil) {
@@ -26,6 +29,7 @@ public struct LibPhoneNumber {
     }
 
     /// Attemps to parse `phoneNumber`.
+    ///
     /// - Parameters:
     ///   - phoneNumber: Phone number string to parse
     /// - Returns: ``LibPhoneNumber.PhoneNumber`` on successful parsing
@@ -42,6 +46,7 @@ public struct LibPhoneNumber {
     }
 
     /// Extract region code
+    ///
     /// - Parameter phoneNumber: Phone number string, ex +380634445566
     /// - Returns: Region code, ex 'UA'
     public func regionCodeForPhoneNumber(_ phoneNumber: String) throws -> String? {
@@ -52,42 +57,39 @@ public struct LibPhoneNumber {
                 })()
 """
 
-        return try context.throwableEvaluateScript(script)?.toString()
+        guard let value = try context.throwableEvaluateScript(script)?.toString(),
+              value != "undefined", value != "null"
+        else {
+            return nil
+        }
+
+        return value
     }
 
     /// Generates example phone number
+    ///
     /// - Parameters:
     ///   - region: Region code, ex 'UA'
     ///   - type: Number type
     /// - Returns: Phone example
     public func examplePhoneNumber(
         region: String,
-        type: PhoneNumberType? = nil
+        type: PhoneNumberType = .mobile
     ) throws -> PhoneNumber? {
-        let script: String
-        if let type {
-            script = """
-                (function () {
-                    let numberType = Libphonenumber.getNumberType('\(type.rawValue)');
-                    let example = Libphonenumber.getUtil().getExampleNumberForType('\(region)', numberType);
-                    let out = Libphonenumber.extractPropertyObject(example);
-                    return JSON.stringify(out);
-                })()
+        let script = """
+            (function () {
+                let numberType = Libphonenumber.getNumberType('\(type.rawValue)');
+                let example = Libphonenumber.getUtil().getExampleNumberForType('\(region)', numberType);
+                let out = Libphonenumber.extractPropertyObject(example);
+                return JSON.stringify(out);
+            })()
 """
-        } else {
-            script = """
-                (function () {
-                    let example = Libphonenumber.getUtil().getExampleNumber('\(region)');
-                    let out = Libphonenumber.extractPropertyObject(example);
-                    return JSON.stringify(out);
-                })()
-"""
-        }
 
         return try context.throwableEvaluateScript(script)?.decode()
     }
 
     /// Check phone number validity
+    ///
     /// - Parameters:
     ///   - phoneNumber: Phone number to check
     ///   - region: Region code, ex 'UA'
@@ -117,6 +119,7 @@ public struct LibPhoneNumber {
     }
 
     /// Formats given phone number
+    ///
     /// - Parameters:
     ///   - phoneNumber: Phone number to format
     ///   - format: Format type
@@ -136,6 +139,30 @@ public struct LibPhoneNumber {
         guard let value = try context.throwableEvaluateScript(script)?.toString(),
               value != "undefined" // for some reason error is not thrown in JS, handle this case here
         else {
+            return nil
+        }
+
+        return value
+    }
+
+    /// Formats `phoneNumber` with `AsYouTypeFormatter`
+    ///
+    /// - Parameter phoneNumber: Phone number to format
+    /// - Returns: Formatted string, ex. +380 63 111 2233
+    public func formatWithAsYouTypeFormatterPhoneNumber(_ phoneNumber: String) throws -> String? {
+        let script = """
+                (function () {
+                    let arr = '\(phoneNumber)';
+                    var last = '';
+                    let formatter = Libphonenumber.newAsYouTypeFormatter();
+                    for (c in arr) {
+                        last = formatter.inputDigit(arr[c]);
+                    }
+                    return last;
+                })()
+"""
+
+        guard let value = try context.throwableEvaluateScript(script)?.toString() else {
             return nil
         }
 

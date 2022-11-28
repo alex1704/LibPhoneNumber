@@ -84,4 +84,19 @@ final class LibPhoneNumberTests: XCTestCase {
         XCTAssert(!(try XCTUnwrap(try libPhoneNumber.formatPhoneNumber(validNumber))).isEmpty)
         XCTAssert(try libPhoneNumber.formatPhoneNumber(invalidNumber) == nil)
     }
+
+    func testPhoneNumberFormatWithAsYouTypeFormatter() throws {
+        // given
+        let libPhoneNumber = try XCTUnwrap(LibPhoneNumber())
+
+        // when
+        let number = "+380631112233"
+
+        // then
+        let formatted = try XCTUnwrap(try libPhoneNumber.formatWithAsYouTypeFormatterPhoneNumber(number))
+        let parts = formatted.split(separator: " ")
+        XCTAssert(parts.contains("+380"))
+        XCTAssert(parts.contains("63"))
+        XCTAssert(parts.contains("111"))
+    }
 }
